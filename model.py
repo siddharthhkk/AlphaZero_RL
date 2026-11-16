@@ -1,8 +1,8 @@
 import torch
-from TicTacToe import TicTacToe
 import torch.nn as nn
 import torch.nn.functional as F
 import matplotlib.pyplot as plt
+from TicTacToe import TicTacToe
 
 class ResNet(nn.Module):
     def __init__(self, game, num_resBlocks, num_hidden):

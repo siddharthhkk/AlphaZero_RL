@@ -46,7 +46,8 @@ class TicTacToe:
 
     def get_opponent(self, player):
         return -player # returns the opponent player (-1 for player 1 and 1 for player -1)
-    def get_opponent_value(self, value): return -value
+    def get_opponent_value(self, value): 
+        return -value
 
     def change_game_perspective(self, state, player):
         return state * player  # Perspective of the current player (1 for player 1, -1 for player -1)
@@ -59,7 +60,7 @@ class TicTacToe:
 
 
 
-
+#mcts main.py
 def main():
     game = TicTacToe()
     player = 1
