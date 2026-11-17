@@ -1,17 +1,24 @@
 import numpy as np
+import torch
 from TicTacToe import TicTacToe
 from AlphaMCTS import AlphaMCTS
 from model import ResNet
+from ConnectFour import ConnectFour
 
 def main():
-    game = TicTacToe()
+    #game = TicTacToe()
+    game = ConnectFour()
     player = 1
     args = {
         'c': 2, 
-        'num_searches': 1000
+        'num_searches': 1000,
+        'dirichlet_epsilon': 0.25,
+        'dirichlet_alpha': 0.3
     }
-
-    model = ResNet(game, 4, 64)
+    device = torch.device("cuda" if torch.cuda.is_available() else 'cpu')
+    #model = ResNet(game, 4, 64, device)
+    model = ResNet(game, 9, 128, device) # connectfour
+    model.load_state_dict(torch.load('checkpoints/model_7_ConnectFour.pt', map_location=device))
     model.eval()
     mcts = AlphaMCTS(game, args, model)
     state = game.get_initial_state()
@@ -22,7 +29,7 @@ def main():
             valid_moves = game.get_valid_moves(state)
             print("Valid moves:", [i for i in range(game.action_size) if valid_moves[i] == 1])
 
-            action = int(input("Enter your move (0-8): "))
+            action = int(input(f"{player}:"))
             if valid_moves[action] == 0:
                 print("action not valid")
                 continue

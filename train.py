@@ -6,6 +6,7 @@ from tqdm import trange
 from AlphaMCTS import AlphaMCTS
 from TicTacToe import TicTacToe
 from model import ResNet
+from ConnectFour import ConnectFour
 
 
 class AlphaZero:
@@ -17,7 +18,10 @@ class AlphaZero:
         self.mcts = AlphaMCTS(game, args, model)
 
         base_dir = os.path.dirname(os.path.abspath(__file__))
-        self.save_dir = os.path.join(base_dir, "checkpoints")
+        if self.game == 'TicTacToe':
+            self.save_dir = os.path.join(base_dir, "checkpoints/tictactoe")
+        elif self.game == 'ConnectFour':
+            self.save_dir = os.path.join(base_dir, "checkpoints/connectfour")
         os.makedirs(self.save_dir, exist_ok=True)
 
     def selfPlay(self):
@@ -90,19 +94,21 @@ class AlphaZero:
 
 
 
-game = TicTacToe()
+#game = TicTacToe()
+game = ConnectFour()
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-model = ResNet(game, 4, 64, device)
+#model = ResNet(game, 4, 64, device)
+model = ResNet(game, 9, 128, device)
 
 opt = torch.optim.Adam(model.parameters(), lr=0.001, weight_decay=0.0001)
 args = {
     'c': 2,
-    'num_searches': 60,
-    'num_iterations': 3,
+    'num_searches': 600, #60
+    'num_iterations': 8, #3
     'num_selfPlay_iterations': 500,
     'num_epochs': 4,
-    'batch_size': 64,
-    'temperature': 1.25,  # 0-3!
+    'batch_size': 128, # 64
+    'temperature': 1.25,  #ranges from 0-3!
     'dirichlet_epsilon': 0.25,
     'dirichlet_alpha': 0.3
 }
