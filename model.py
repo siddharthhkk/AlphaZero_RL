@@ -5,8 +5,9 @@ import matplotlib.pyplot as plt
 from TicTacToe import TicTacToe
 
 class ResNet(nn.Module):
-    def __init__(self, game, num_resBlocks, num_hidden):
+    def __init__(self, game, num_resBlocks, num_hidden, device):
         super().__init__()
+        self.device = device
         self.startBlock = nn.Sequential(
             nn.Conv2d(3, num_hidden, kernel_size=3, padding=1),
             nn.BatchNorm2d(num_hidden),
@@ -30,6 +31,7 @@ class ResNet(nn.Module):
             nn.Linear(3 * game.row_count * game.column_count, 1),
             nn.Tanh()
         )
+        self.to(device)
 
     def forward(self, x):
         x = self.startBlock(x)
@@ -57,16 +59,22 @@ class ResBlock(nn.Module):
 
 def main():
     game = TicTacToe()
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     state = game.get_initial_state()
-    state = game.get_next_state(state, 2, 1)
-    state = game.get_next_state(state, 7, -1)
+    state = game.get_next_state(state, 2, -1)
+    state = game.get_next_state(state, 4, -1)
+    state = game.get_next_state(state, 6, 1)
+    state = game.get_next_state(state, 8, 1)
     #print(state)
 
     encoded_state = game.get_encoded_state(state)
     #print(encoded_state)
 
-    state_tensor = torch.tensor(encoded_state).unsqueeze(0)
-    model = ResNet(game, 4, 64)
+    state_tensor = torch.tensor(encoded_state, device=device).unsqueeze(0)
+
+    model = ResNet(game, 4, 64, device=device)
+    model.load_state_dict(torch.load('checkpoints/model_2.pt', map_location=device))
+    model.eval()
     policy, value = model.forward(state_tensor)
     policy = torch.softmax(policy, axis=1).squeeze(0).detach().cpu().numpy()
     print(policy, value.item())

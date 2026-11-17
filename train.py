@@ -30,8 +30,10 @@ class AlphaZero:
             action_probs = self.mcts.search(neutral_state)
 
             memory.append((neutral_state, action_probs, player))
-
-            action = np.random.choice(self.game.action_size, p=action_probs)
+            # temperature = squeezes the probs much closer, so we do more exploration (instead of max prob also pick second max value sometimes)
+            temperature_action_probs = action_probs ** (1 / self.args['temperature'])
+            temperature_action_probs /= np.sum(temperature_action_probs)
+            action = np.random.choice(self.game.action_size, p=temperature_action_probs)
             state = self.game.get_next_state(state, action, player)
 
             value, is_terminal = self.game.get_value_and_terminated(state, action)
@@ -50,7 +52,25 @@ class AlphaZero:
             player = self.game.get_opponent(player)
 
     def train(self, memory):
-        pass
+        random.shuffle(memory)
+        for batchidx in range(0, len(memory), self.args['batch_size']):
+            sample = memory[batchidx: min(len(memory) - 1, batchidx + self.args['batch_size'])]
+            state, policy_targets, value_targets = zip(*sample)
+
+            state, policy_targets, value_targets = np.array(state), np.array(policy_targets), np.array(value_targets).reshape(-1,1)
+            state = torch.tensor(state, dtype=torch.float32, device=self.model.device)
+            policy_targets = torch.tensor(policy_targets, dtype=torch.float32, device=self.model.device)
+            value_targets = torch.tensor(value_targets, dtype=torch.float32, device=self.model.device)
+
+            out_policy, out_value = self.model(state)
+            policy_loss = torch.nn.functional.cross_entropy(out_policy, policy_targets)
+            value_loss = torch.nn.functional.mse_loss(out_value, value_targets)
+            loss = policy_loss + value_loss
+
+            self.optimizer.zero_grad()
+            loss.backward()
+            print(loss.item())
+            self.optimizer.step()
 
 
     def learn(self):
@@ -65,21 +85,26 @@ class AlphaZero:
             for epoch in trange(self.args['num_epochs']):
                 self.train(memory)
 
-            torch.save(self.model.state_dict(), os.path.join(self.save_dir, f"model_{iter}.pt"))
-            torch.save(self.optimizer.state_dict(), os.path.join(self.save_dir, f"optimizer_{iter}.pt"))
+            torch.save(self.model.state_dict(), os.path.join(self.save_dir, f"model_{iter}_{self.game}.pt"))
+            torch.save(self.optimizer.state_dict(), os.path.join(self.save_dir, f"optimizer_{iter}_{self.game}.pt"))
 
 
 
 game = TicTacToe()
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+model = ResNet(game, 4, 64, device)
 
-model = ResNet(game, 4, 64)
-opt = torch.optim.Adam(model.parameters(), lr=0.001)
+opt = torch.optim.Adam(model.parameters(), lr=0.001, weight_decay=0.0001)
 args = {
     'c': 2,
     'num_searches': 60,
     'num_iterations': 3,
-    'num_selfPlay_iterations': 10,
-    'num_epochs': 4
+    'num_selfPlay_iterations': 500,
+    'num_epochs': 4,
+    'batch_size': 64,
+    'temperature': 1.25,  # 0-3!
+    'dirichlet_epsilon': 0.25,
+    'dirichlet_alpha': 0.3
 }
 
 alphaZero = AlphaZero(model, optimizer=opt, game=game, args=args)
