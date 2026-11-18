@@ -10,7 +10,7 @@ from ConnectFour import ConnectFour
 
 
 class AlphaZero:
-    def __init__(self, model, optimizer, game, args):
+    def __init__(self, model, optimizer, game, args, game_name):
         self.model = model
         self.optimizer = optimizer
         self.game = game
@@ -18,9 +18,9 @@ class AlphaZero:
         self.mcts = AlphaMCTS(game, args, model)
 
         base_dir = os.path.dirname(os.path.abspath(__file__))
-        if self.game == 'TicTacToe':
+        if game_name == 'TicTacToe':
             self.save_dir = os.path.join(base_dir, "checkpoints/tictactoe")
-        elif self.game == 'ConnectFour':
+        elif game_name == 'ConnectFour':
             self.save_dir = os.path.join(base_dir, "checkpoints/connectfour")
         os.makedirs(self.save_dir, exist_ok=True)
 
@@ -57,6 +57,8 @@ class AlphaZero:
 
     def train(self, memory):
         random.shuffle(memory)
+        total_loss = 0.0
+        num_batches = 0
         for batchidx in range(0, len(memory), self.args['batch_size']):
             sample = memory[batchidx: min(len(memory) - 1, batchidx + self.args['batch_size'])]
             state, policy_targets, value_targets = zip(*sample)
@@ -73,8 +75,11 @@ class AlphaZero:
 
             self.optimizer.zero_grad()
             loss.backward()
-            print(loss.item())
             self.optimizer.step()
+
+            total_loss += loss.item()
+            num_batches += 1
+        print(f"Average Loss: {total_loss / num_batches:.4f}")
 
 
     def learn(self):
@@ -94,24 +99,40 @@ class AlphaZero:
 
 
 
-#game = TicTacToe()
-game = ConnectFour()
+game_name = 'ConnectFour'
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-#model = ResNet(game, 4, 64, device)
-model = ResNet(game, 9, 128, device)
+
+if game_name == 'TicTacToe':
+    game = TicTacToe()
+    model = ResNet(game, 4, 64, device)
+    args = {
+        'c': 2,
+        'num_searches': 60,
+        'num_iterations': 3,
+        'num_selfPlay_iterations': 500,
+        'num_epochs': 4,
+        'batch_size': 64,
+        'temperature': 1.25,  #ranges from 0-3!
+        'dirichlet_epsilon': 0.25,
+        'dirichlet_alpha': 0.3
+    }
+
+elif game_name == 'ConnectFour':
+    game = ConnectFour()
+    model = ResNet(game, 9, 128, device)
+    args = {
+        'c': 2,
+        'num_searches': 600,
+        'num_iterations': 8,
+        'num_selfPlay_iterations': 500,
+        'num_epochs': 4,
+        'batch_size': 128,
+        'temperature': 1.25,
+        'dirichlet_epsilon': 0.25,
+        'dirichlet_alpha': 0.3
+    }
 
 opt = torch.optim.Adam(model.parameters(), lr=0.001, weight_decay=0.0001)
-args = {
-    'c': 2,
-    'num_searches': 600, #60
-    'num_iterations': 8, #3
-    'num_selfPlay_iterations': 500,
-    'num_epochs': 4,
-    'batch_size': 128, # 64
-    'temperature': 1.25,  #ranges from 0-3!
-    'dirichlet_epsilon': 0.25,
-    'dirichlet_alpha': 0.3
-}
 
-alphaZero = AlphaZero(model, optimizer=opt, game=game, args=args)
+alphaZero = AlphaZero(model, optimizer=opt, game=game, args=args, game_name=game_name)
 alphaZero.learn()

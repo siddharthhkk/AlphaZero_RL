@@ -6,8 +6,7 @@ from model import ResNet
 from ConnectFour import ConnectFour
 
 def main():
-    #game = TicTacToe()
-    game = ConnectFour()
+    game_name = 'ConnectFour'
     player = 1
     args = {
         'c': 2, 
@@ -16,9 +15,14 @@ def main():
         'dirichlet_alpha': 0.3
     }
     device = torch.device("cuda" if torch.cuda.is_available() else 'cpu')
-    #model = ResNet(game, 4, 64, device)
-    model = ResNet(game, 9, 128, device) # connectfour
-    model.load_state_dict(torch.load('checkpoints/model_7_ConnectFour.pt', map_location=device))
+    if game_name == 'TicTacToe':
+        game = TicTacToe()
+        model = ResNet(game, 4, 64, device)
+        model.load_state_dict(torch.load('checkpoints/tictactoe/model_2_TicTacToe.pt', map_location=device))
+    elif game_name == 'ConnectFour':
+        game = ConnectFour()
+        model = ResNet(game, 9, 128, device) # connectfour
+        model.load_state_dict(torch.load('checkpoints/connectfour/model_7_ConnectFour.pt', map_location=device))
     model.eval()
     mcts = AlphaMCTS(game, args, model)
     state = game.get_initial_state()
