@@ -61,6 +61,10 @@ class ConnectFour:
         return state * player  # Perspective of the current player (1 for player 1, -1 for player -1)
 
     def get_encoded_state(self, state):
-        return np.stack(
+        encoded_state =  np.stack(
             (state == -1, state == 0, state == 1)
         ).astype(np.float32)
+
+        if len(state.shape) == 3:
+            encoded_state = np.swapaxes(encoded_state, 0, 1)  # for parallel training
+        return encoded_state

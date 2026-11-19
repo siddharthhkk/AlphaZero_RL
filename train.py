@@ -99,7 +99,7 @@ class AlphaZero:
 
 
 
-game_name = 'ConnectFour'
+game_name = 'TicTacToe'
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 if game_name == 'TicTacToe':
@@ -107,7 +107,7 @@ if game_name == 'TicTacToe':
     model = ResNet(game, 4, 64, device)
     args = {
         'c': 2,
-        'num_searches': 60,
+        'num_searches': 120,
         'num_iterations': 3,
         'num_selfPlay_iterations': 500,
         'num_epochs': 4,
